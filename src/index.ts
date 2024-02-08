@@ -5,8 +5,10 @@ const app = express();
 function dumpRequestStats(req: Request) {
 	const { headers } = req;
 	console.log("=======================================================")
+	console.log("Timestamp: " + new Date())
 	console.log("Host: ", req.hostname)
 	console.log("Path: ", req.path)
+	console.log("Method: ", req.method)
 	console.log("----------")
 	console.log("HEADERS: ")
 	console.log("----------")
@@ -15,15 +17,19 @@ function dumpRequestStats(req: Request) {
 	}
 }
 
-function dumpRequestBody(buf: Buffer) {
+function dumpRequestBody(bufs: Buffer[]) {
 	console.log("----------")
 	console.log("BODY Bytes: ")
 	console.log("----------")
-	console.log(buf.toString('hex'))
+	for (var i=0; i<bufs.length; i++) {
+		process.stdout.write(bufs[i].toString('hex'));
+	}
 	console.log("----------")
 	console.log("BODY String")
 	console.log("----------")
-	console.log(buf.toString('utf8'))
+	for (var i=0; i<bufs.length; i++) {
+		process.stdout.write(bufs[i].toString('utf8'));
+	}
 }
 
 // app.use(express.raw({ type: "*" }));
@@ -36,19 +42,21 @@ app.get("*", (req, res) => {
 app.post("*", (req, res) => {
 	dumpRequestStats(req)
 
-	var buffer = Buffer.alloc(0);
+	var buffers = [] as Buffer[];
+	var len=0;
 	console.log("----------")
 	console.log("Collecting Body");
 	console.log("----------")
 
 	req.on('data', (data) => {
 		console.log("got data! ", data.length)
-		buffer = Buffer.concat([buffer, data])
-		console.log(buffer.length);
+		buffers.push(data);
+		len += data.length;
 	});
 
 	req.on("close", () => {
-		dumpRequestBody(buffer);
+		console.log("Total size: " + len);
+		dumpRequestBody(buffers);
 		res.end()
 	})
 })
